@@ -72,9 +72,9 @@ public class GridGenerator : MonoBehaviour
         }
     }
 
-    private int GetFontSize(int columns)
+    private float GetFontSize(int columns)
     {
-        int fontSize = 18 - (columns / 8);
+        float fontSize = 17.75f - (columns / 8f);
         return fontSize;
     }
 }

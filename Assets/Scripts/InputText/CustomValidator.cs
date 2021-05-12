@@ -19,8 +19,6 @@ public class CustomValidator : TMPro.TMP_InputValidator
         Debug.Log("tried to validate");
         if ( ch == 44 || ch == 45 || ch == 32 ||System.Char.IsDigit(ch))
         {
-            // if ((int)ch == 45 && pos != 0 && text.Substring(pos - 1) == "-" )
-            //     return '\0';
             text = text.Insert(pos,ch.ToString());
             pos++;
             return ch;
