@@ -74,7 +74,7 @@ public class GridGenerator : MonoBehaviour
 
     private float GetFontSize(int columns)
     {
-        float fontSize = 17.75f - (columns / 8f);
+        float fontSize = 18.25f - (columns / 8.25f);
         return fontSize;
     }
 }
