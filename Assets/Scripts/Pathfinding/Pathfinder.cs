@@ -10,116 +10,52 @@ public class Pathfinder : MonoBehaviour
     [SerializeField] private TextMeshProUGUI totalCostText;
     [SerializeField] private TextMeshProUGUI pathRowIndicesText;
     
-    private int _gridRows;
-    private int _gridColumns;
-    private int[,] _grid;
     private Node[,] _nodeTable;
     private IParseInput _stringParser;
+    private NodeTableGenerator _nodeTableGenerator;
+    private SolutionUtilities _solutionUtilities;
 
-    private void Awake() => _stringParser = GetComponent<IParseInput>();
+    private void Awake()
+    {
+        _stringParser = GetComponent<IParseInput>();
+        _nodeTableGenerator = new NodeTableGenerator();
+        _solutionUtilities = new SolutionUtilities();
+    }
 
     public void FindBestPath()
     {
-        _grid = _stringParser.ParseInput(inputField.text);
-        if (_grid == null)
+        int[,] grid = _stringParser.ParseInput(inputField.text);
+        if (grid == null)
             return;
+        int amountOfRows = grid.GetLength(0);
+        int amountOfColumns = grid.GetLength(1);
+        //creates the node table and has out parameter for the column index of where the path ends.
+        _nodeTable = _nodeTableGenerator.GenerateNodeTable(grid, amountOfRows, amountOfColumns, out int pathEndColumnIndex);
         
-        _gridRows = _grid.GetLength(0);
-        _gridColumns = _grid.GetLength(1);
-        _nodeTable = new Node[_gridRows, _gridColumns];
-        int highestColumnIndex = 0;
-        
-        for (int column = 0; column < _gridColumns; column++)
-        {
-            bool columnHasAValidNode = false;
-            for (int row = 0; row < _gridRows; row++)
-            {
-                if (column == 0)
-                {
-                    if (_grid[row, column] < 51)
-                        columnHasAValidNode = true;
-                    _nodeTable[row, column].TotalCost = _grid[row, column];
-                    continue;
-                }
-                //populates node table and returns column index if node total cost was under 50 and 0 if it was over.
-                int columnIndex = PopulateNodeTable(column,row, _grid[row,column]);
-                if (columnIndex > highestColumnIndex)
-                {
-                    highestColumnIndex = columnIndex;
-                    columnHasAValidNode = true;
-                }
-            }
-            if (!columnHasAValidNode)
-            {
-                break;
-            }
-        }
+        SetPathMadeItToThroughText(pathEndColumnIndex, amountOfColumns);
+        int pathEndRowIndex = _solutionUtilities.GetPathEndRowIndex(pathEndColumnIndex, _nodeTable);
+        SetPathTotalCostText(pathEndRowIndex, pathEndColumnIndex);
+        SetPathRowIndicesText(pathEndRowIndex, pathEndColumnIndex);
+    }
 
-        madeItThroughText.text = highestColumnIndex == _gridColumns - 1 ? "Yes" : "No";
-       
-        Tuple<int, int> endNodeRowAndColumn = GetEndNodeCoordinates(highestColumnIndex);
-        Node bestNode = _nodeTable[endNodeRowAndColumn.Item1, endNodeRowAndColumn.Item2];
-        totalCostText.text = bestNode.TotalCost.ToString();
-        
-        LinkedList<int> bestPath = GetPath(endNodeRowAndColumn.Item1, endNodeRowAndColumn.Item2);
+    private void SetPathMadeItToThroughText(int pathEndColumnIndex, int totalAmountOfColumns)
+    {
+        madeItThroughText.text = pathEndColumnIndex == totalAmountOfColumns - 1 ? "Yes" : "No";
+    }
+
+    private void SetPathTotalCostText(int pathEndRowIndex, int pathEndColumnIndex)
+    {
+        Node pathEnd = _nodeTable[pathEndRowIndex, pathEndColumnIndex];
+        totalCostText.text = pathEnd.TotalPathCost.ToString();
+    }
+
+    private void SetPathRowIndicesText(int pathEndRowIndex, int pathEndColumnIndex)
+    {
+        LinkedList<int> bestPath = _solutionUtilities.GetPath(pathEndRowIndex, pathEndColumnIndex, _nodeTable);
         pathRowIndicesText.text = String.Empty;
         foreach (var index in bestPath)
         {
             pathRowIndicesText.text += index + ",";
         }
-    }
-    
-    private int PopulateNodeTable(int columnIndex, int rowIndex, int gridCost)
-    {
-        int lowestTotalCost = Int32.MaxValue;
-        int highestColumnIndex = 0;
-        for (int i = -1; i < 2; i++)
-        {
-            int neighborRowIndex = (rowIndex + _gridRows + i) % _gridRows;
-            Node neighbor = _nodeTable[neighborRowIndex, columnIndex - 1];
-
-            if (neighbor.TotalCost > 50)
-                continue;
-            if (neighbor.TotalCost < lowestTotalCost)
-            {
-                lowestTotalCost = neighbor.TotalCost;
-                _nodeTable[rowIndex,columnIndex].TotalCost = neighbor.TotalCost + gridCost;
-                _nodeTable[rowIndex,columnIndex].NeighborRowIndex = neighborRowIndex;
-            }
-            if (neighbor.TotalCost + gridCost <= 50)
-                highestColumnIndex = columnIndex;
-        }
-        if(lowestTotalCost == Int32.MaxValue)
-            _nodeTable[rowIndex,columnIndex].TotalCost = lowestTotalCost;
-        
-        return highestColumnIndex;
-    }
-    
-    private Tuple<int,int> GetEndNodeCoordinates(int columnIndex)
-    {
-        int lowestCost = Int32.MaxValue;
-        int bestIndex = 0;
-        for (int i = 0; i < _gridRows; i++)
-        {
-            if (_nodeTable[i, columnIndex].TotalCost < lowestCost)
-            {
-                lowestCost = _nodeTable[i, columnIndex].TotalCost;
-                bestIndex = i;
-            }
-        }
-        return new Tuple<int, int>(bestIndex, columnIndex);
-    }
-    
-    private  LinkedList<int> GetPath(int rowIndex,int columnIndex)
-    {
-        LinkedList<int> path = new LinkedList<int>();
-        path.AddFirst(rowIndex + 1);
-        int rowPointer = _nodeTable[rowIndex, columnIndex].NeighborRowIndex;
-        for (int i = 0; i < columnIndex; i++)
-        {
-            path.AddFirst(_nodeTable[rowPointer, columnIndex - i].NeighborRowIndex + 1);
-            rowPointer = _nodeTable[rowPointer, columnIndex - i].NeighborRowIndex;
-        }
-        return path;
     }
 }
